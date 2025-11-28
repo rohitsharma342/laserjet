@@ -1,362 +1,386 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_staggered_grid_view/flutter_staggered_grid_view.dart';
-import 'package:carousel_slider/carousel_slider.dart';
-import 'package:badges/badges.dart' as badges;
 import 'package:provider/provider.dart';
-import '../models/printer.dart';
-import '../services/data_service.dart';
-import '../services/cart_service.dart';
+import 'package:badges/badges.dart' as badges;
+import '../providers/product_provider.dart';
+import '../providers/cart_provider.dart';
+import '../widgets/product_card.dart';
 import '../widgets/custom_app_bar.dart';
-import '../widgets/printer_card.dart';
-import '../widgets/category_tab.dart';
 import '../utils/constants.dart';
+import 'product_detail_screen.dart';
+import 'cart_screen.dart';
+import 'profile_screen.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({Key? key}) : super(key: key);
+  const DashboardScreen({super.key});
 
   @override
-  _DashboardScreenState createState() => _DashboardScreenState();
+  State<DashboardScreen> createState() => _DashboardScreenState();
 }
 
-class _DashboardScreenState extends State<DashboardScreen> {
+class _DashboardScreenState extends State<DashboardScreen>
+    with SingleTickerProviderStateMixin {
   final TextEditingController _searchController = TextEditingController();
-  List<Printer> _allPrinters = [];
-  List<Printer> _filteredPrinters = [];
-  List<Printer> _trendingPrinters = [];
-  String _selectedCategory = 'All';
-  String _searchQuery = '';
+  late TabController _tabController;
 
   @override
   void initState() {
     super.initState();
-    _loadPrinters();
+    final categories = context.read<ProductProvider>().categories;
+    _tabController = TabController(length: categories.length, vsync: this);
   }
 
-  void _loadPrinters() {
-    _allPrinters = DataService.samplePrinters;
-    _trendingPrinters = DataService.getTrendingPrinters();
-    _filterPrinters();
-  }
-
-  void _filterPrinters() {
-    setState(() {
-      _filteredPrinters = DataService.searchPrinters(
-        _searchQuery,
-        category: _selectedCategory,
-      );
-    });
-  }
-
-  void _onSearchChanged(String query) {
-    _searchQuery = query;
-    _filterPrinters();
-  }
-
-  void _onCategorySelected(String category) {
-    _selectedCategory = category;
-    _filterPrinters();
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _tabController.dispose();
+    super.dispose();
   }
 
   void _showFilterModal() {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _buildFilterModal(),
-    );
-  }
-
-  void _showNotifications() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (context) => _buildNotificationsModal(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) => _FilterModal(),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const CustomAppBar(
-        title: 'Laserjet',
-        showBackButton: false,
+      appBar: CustomAppBar(
+        title: AppConstants.appName,
+        actions: [
+          Consumer<CartProvider>(
+            builder: (context, cart, child) {
+              return badges.Badge(
+                badgeContent: Text(
+                  cart.itemCount.toString(),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                showBadge: cart.itemCount > 0,
+                child: IconButton(
+                  icon: const Icon(Icons.shopping_cart_outlined),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (_) => const CartScreen()),
+                    );
+                  },
+                ),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const ProfileScreen()),
+              );
+            },
+          ),
+        ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          _loadPrinters();
-        },
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildSearchAndFilter(),
-              const SizedBox(height: 16),
-              _buildCategoryTabs(),
-              const SizedBox(height: 24),
-              _buildTrendingSection(),
-              const SizedBox(height: 24),
-              _buildProductsSection(),
-            ],
-          ),
-        ),
-      ),
-      floatingActionButton: _buildNotificationButton(),
-    );
-  }
-
-  Widget _buildSearchAndFilter() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _searchController,
-            onChanged: _onSearchChanged,
-            decoration: const InputDecoration(
-              hintText: 'Search printers...',
-              prefixIcon: Icon(Icons.search),
-            ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Container(
-          decoration: BoxDecoration(
-            color: AppConstants.primaryColor,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: IconButton(
-            icon: const Icon(Icons.filter_list, color: Colors.white),
-            onPressed: _showFilterModal,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCategoryTabs() {
-    return SizedBox(
-      height: 40,
-      child: ListView.builder(
-        scrollDirection: Axis.horizontal,
-        itemCount: AppConstants.categories.length,
-        itemBuilder: (context, index) {
-          final category = AppConstants.categories[index];
-          return CategoryTab(
-            category: category,
-            isSelected: _selectedCategory == category,
-            onTap: () => _onCategorySelected(category),
-          );
-        },
-      ),
-    );
-  }
-
-  Widget _buildTrendingSection() {
-    if (_trendingPrinters.isEmpty) return const SizedBox();
-    
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Trending Printers',
-          style: TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        CarouselSlider.builder(
-          itemCount: _trendingPrinters.length,
-          itemBuilder: (context, index, realIndex) {
-            return Container(
-              margin: const EdgeInsets.symmetric(horizontal: 4),
-              width: 200,
-              child: PrinterCard(
-                printer: _trendingPrinters[index],
-                isCompact: true,
-              ),
-            );
-          },
-          options: CarouselOptions(
-            height: 280,
-            enableInfiniteScroll: false,
-            enlargeCenterPage: false,
-            viewportFraction: 0.55,
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildProductsSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          _selectedCategory == 'All' 
-              ? 'All Printers'
-              : '$_selectedCategory Printers',
-          style: const TextStyle(
-            fontSize: 20,
-            fontWeight: FontWeight.bold,
-            color: AppConstants.textPrimary,
-          ),
-        ),
-        const SizedBox(height: 12),
-        _filteredPrinters.isEmpty
-            ? _buildEmptyState()
-            : MasonryGridView.count(
-                crossAxisCount: 2,
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                crossAxisSpacing: 12,
-                mainAxisSpacing: 12,
-                itemCount: _filteredPrinters.length,
-                itemBuilder: (context, index) {
-                  return PrinterCard(printer: _filteredPrinters[index]);
-                },
-              ),
-      ],
-    );
-  }
-
-  Widget _buildEmptyState() {
-    return Center(
-      child: Column(
+      body: Column(
         children: [
-          const SizedBox(height: 40),
-          Icon(
-            Icons.search_off,
-            size: 80,
-            color: Colors.grey[400],
-          ),
-          const SizedBox(height: 16),
-          Text(
-            'No printers found matching your criteria.',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey[600],
+          _buildSearchSection(),
+          _buildCategoryTabs(),
+          _buildTrendingSection(),
+          Expanded(child: _buildProductGrid()),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchSection() {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.paddingMedium),
+      color: Colors.white,
+      child: Row(
+        children: [
+          Expanded(
+            child: TextField(
+              controller: _searchController,
+              decoration: InputDecoration(
+                hintText: 'Search printers...',
+                prefixIcon: const Icon(Icons.search),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+                  borderSide: BorderSide.none,
+                ),
+                filled: true,
+                fillColor: AppConstants.backgroundColor,
+              ),
+              onChanged: (value) {
+                context.read<ProductProvider>().searchProducts(value);
+              },
             ),
-            textAlign: TextAlign.center,
+          ),
+          const SizedBox(width: AppConstants.paddingSmall),
+          IconButton(
+            onPressed: _showFilterModal,
+            icon: const Icon(Icons.tune),
+            style: IconButton.styleFrom(
+              backgroundColor: AppConstants.primaryColor,
+              foregroundColor: Colors.white,
+            ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildNotificationButton() {
-    return Consumer<CartService>(
-      builder: (context, cartService, child) {
-        return badges.Badge(
-          badgeContent: Text(
-            '${cartService.notificationCount}',
-            style: const TextStyle(color: Colors.white, fontSize: 12),
-          ),
-          showBadge: cartService.notificationCount > 0,
-          badgeStyle: const badges.BadgeStyle(
-            badgeColor: Colors.red,
-          ),
-          child: FloatingActionButton(
-            onPressed: _showNotifications,
-            child: const Icon(Icons.notifications_outlined),
+  Widget _buildCategoryTabs() {
+    return Consumer<ProductProvider>(
+      builder: (context, provider, child) {
+        return Container(
+          color: Colors.white,
+          child: TabBar(
+            controller: _tabController,
+            isScrollable: true,
+            labelColor: AppConstants.primaryColor,
+            unselectedLabelColor: AppConstants.textSecondary,
+            indicatorColor: AppConstants.primaryColor,
+            tabs: provider.categories
+                .map((category) => Tab(text: category))
+                .toList(),
+            onTap: (index) {
+              final category = provider.categories[index];
+              provider.filterByCategory(category);
+            },
           ),
         );
       },
     );
   }
 
-  Widget _buildFilterModal() {
+  Widget _buildTrendingSection() {
+    return Consumer<ProductProvider>(
+      builder: (context, provider, child) {
+        final trendingProducts = provider.trendingProducts;
+        if (trendingProducts.isEmpty) return const SizedBox.shrink();
+
+        return Container(
+          margin: const EdgeInsets.symmetric(vertical: AppConstants.paddingMedium),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: AppConstants.paddingMedium),
+                child: Text(
+                  'Trending Products',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppConstants.paddingSmall),
+              SizedBox(
+                height: 200,
+                child: ListView.builder(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.symmetric(horizontal: AppConstants.paddingMedium),
+                  itemCount: trendingProducts.length,
+                  itemBuilder: (context, index) {
+                    final product = trendingProducts[index];
+                    return Container(
+                      width: 160,
+                      margin: const EdgeInsets.only(right: AppConstants.paddingSmall),
+                      child: ProductCard(
+                        product: product,
+                        onTap: () => _navigateToProductDetail(product.id),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildProductGrid() {
+    return Consumer<ProductProvider>(
+      builder: (context, provider, child) {
+        if (provider.isLoading) {
+          return const Center(
+            child: CircularProgressIndicator(),
+          );
+        }
+
+        if (provider.products.isEmpty) {
+          return const Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.search_off,
+                  size: 64,
+                  color: Colors.grey,
+                ),
+                SizedBox(height: 16),
+                Text(
+                  'No printers found matching your criteria.',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return GridView.builder(
+          padding: const EdgeInsets.all(AppConstants.paddingMedium),
+          gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+            crossAxisCount: 2,
+            childAspectRatio: 0.75,
+            crossAxisSpacing: AppConstants.paddingMedium,
+            mainAxisSpacing: AppConstants.paddingMedium,
+          ),
+          itemCount: provider.products.length,
+          itemBuilder: (context, index) {
+            final product = provider.products[index];
+            return ProductCard(
+              product: product,
+              onTap: () => _navigateToProductDetail(product.id),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _navigateToProductDetail(String productId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ProductDetailScreen(productId: productId),
+      ),
+    );
+  }
+}
+
+class _FilterModal extends StatefulWidget {
+  @override
+  State<_FilterModal> createState() => _FilterModalState();
+}
+
+class _FilterModalState extends State<_FilterModal> {
+  late String selectedBrand;
+  late RangeValues priceRange;
+
+  @override
+  void initState() {
+    super.initState();
+    final provider = context.read<ProductProvider>();
+    selectedBrand = provider.selectedBrand;
+    priceRange = RangeValues(provider.minPrice, provider.maxPrice);
+  }
+
+  @override
+  Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.all(AppConstants.paddingLarge),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Text(
-            'Filter Options',
+            'Filter Products',
             style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text('Coming soon: Price range, brand filters, and more!'),
-          const SizedBox(height: 20),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
+          const SizedBox(height: AppConstants.paddingLarge),
+          const Text(
+            'Brand',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationsModal() {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
+          const SizedBox(height: AppConstants.paddingSmall),
+          Consumer<ProductProvider>(
+            builder: (context, provider, child) {
+              return Wrap(
+                spacing: AppConstants.paddingSmall,
+                children: provider.brands.map((brand) {
+                  return FilterChip(
+                    label: Text(brand),
+                    selected: selectedBrand == brand,
+                    onSelected: (selected) {
+                      setState(() {
+                        selectedBrand = brand;
+                      });
+                    },
+                  );
+                }).toList(),
+              );
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingLarge),
+          const Text(
+            'Price Range',
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          RangeSlider(
+            values: priceRange,
+            min: 0,
+            max: 1000,
+            divisions: 20,
+            labels: RangeLabels(
+              '\$${priceRange.start.round()}',
+              '\$${priceRange.end.round()}',
+            ),
+            onChanged: (values) {
+              setState(() {
+                priceRange = values;
+              });
+            },
+          ),
+          const SizedBox(height: AppConstants.paddingLarge),
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Notifications',
-                style: TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+              Expanded(
+                child: TextButton(
+                  onPressed: () {
+                    context.read<ProductProvider>().clearFilters();
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Clear All'),
                 ),
               ),
-              TextButton(
-                onPressed: () {
-                  context.read<CartService>().markNotificationsAsRead();
-                  Navigator.pop(context);
-                },
-                child: const Text('Mark all as read'),
+              const SizedBox(width: AppConstants.paddingMedium),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    final provider = context.read<ProductProvider>();
+                    provider.filterByBrand(selectedBrand);
+                    provider.filterByPriceRange(priceRange.start, priceRange.end);
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Apply'),
+                ),
               ),
             ],
-          ),
-          const SizedBox(height: 16),
-          _buildNotificationItem('New printers added to your wishlist category'),
-          _buildNotificationItem('Special discount: 20% off on HP printers'),
-          _buildNotificationItem('Your cart has items waiting for checkout'),
-          const SizedBox(height: 20),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildNotificationItem(String message) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      margin: const EdgeInsets.only(bottom: 8),
-      decoration: BoxDecoration(
-        color: AppConstants.cardBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.notifications,
-            color: AppConstants.primaryColor,
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              message,
-              style: const TextStyle(
-                fontSize: 14,
-                color: AppConstants.textPrimary,
-              ),
-            ),
           ),
         ],
       ),

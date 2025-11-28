@@ -1,275 +1,199 @@
 import 'package:flutter/material.dart';
-import 'package:cached_network_image/cached_network_image.dart';
 import '../models/user.dart';
 import '../services/data_service.dart';
-import '../widgets/custom_app_bar.dart';
 import '../utils/constants.dart';
 import 'dashboard_screen.dart';
 
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({Key? key}) : super(key: key);
-
-  @override
-  _ProfileScreenState createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  late User _user;
-  bool _isEditing = false;
-  final _nameController = TextEditingController();
-  final _emailController = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    _user = DataService.sampleUser;
-    _nameController.text = _user.name;
-    _emailController.text = _user.email;
-  }
-
-  @override
-  void dispose() {
-    _nameController.dispose();
-    _emailController.dispose();
-    super.dispose();
-  }
+class ProfileScreen extends StatelessWidget {
+  const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final user = DataService.getCurrentUser();
+
     return Scaffold(
-      appBar: CustomAppBar(
-        title: 'Profile',
-        showBackButton: true,
-        showCartIcon: true,
-        showProfileIcon: false,
+      appBar: AppBar(
+        title: const Text('Profile'),
+        backgroundColor: Colors.white,
+        foregroundColor: Colors.black,
+        elevation: 0,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(AppConstants.paddingMedium),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildProfileHeader(),
-            const SizedBox(height: 24),
-            _buildUserInfo(),
-            const SizedBox(height: 24),
-            _buildOrderHistory(),
-            const SizedBox(height: 24),
-            _buildActions(),
+            _buildProfileHeader(user),
+            const SizedBox(height: AppConstants.paddingLarge),
+            _buildProfileActions(context),
+            const SizedBox(height: AppConstants.paddingLarge),
+            _buildOrderHistory(user),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileHeader() {
-    return Row(
-      children: [
-        CircleAvatar(
-          radius: 40,
-          backgroundColor: AppConstants.primaryColor,
-          child: _user.avatar != null
-              ? ClipOval(
-                  child: CachedNetworkImage(
-                    imageUrl: _user.avatar!,
-                    width: 80,
-                    height: 80,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                    errorWidget: (context, url, error) => const Icon(
-                      Icons.person,
-                      size: 40,
-                      color: Colors.white,
-                    ),
-                  ),
-                )
-              : const Icon(
-                  Icons.person,
-                  size: 40,
-                  color: Colors.white,
-                ),
-        ),
-        const SizedBox(width: 16),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                _user.name,
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppConstants.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                _user.email,
-                style: const TextStyle(
-                  fontSize: 16,
-                  color: AppConstants.textSecondary,
-                ),
-              ),
-            ],
+  Widget _buildProfileHeader(User user) {
+    return Container(
+      padding: const EdgeInsets.all(AppConstants.paddingLarge),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
           ),
-        ),
-        IconButton(
-          icon: Icon(
-            _isEditing ? Icons.close : Icons.edit,
-            color: AppConstants.primaryColor,
-          ),
-          onPressed: () {
-            setState(() {
-              _isEditing = !_isEditing;
-              if (!_isEditing) {
-                // Reset form if cancelled
-                _nameController.text = _user.name;
-                _emailController.text = _user.email;
-              }
-            });
-          },
-        ),
-      ],
-    );
-  }
-
-  Widget _buildUserInfo() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text(
-              'Personal Information',
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppConstants.textPrimary,
+        ],
+      ),
+      child: Column(
+        children: [
+          CircleAvatar(
+            radius: 50,
+            backgroundColor: AppConstants.primaryColor,
+            child: Text(
+              user.name.substring(0, 1).toUpperCase(),
+              style: const TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
               ),
             ),
-            const SizedBox(height: 16),
-            if (_isEditing) ...[
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _emailController,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                ),
-                keyboardType: TextInputType.emailAddress,
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        setState(() {
-                          _isEditing = false;
-                          _nameController.text = _user.name;
-                          _emailController.text = _user.email;
-                        });
-                      },
-                      child: const Text('Cancel'),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: ElevatedButton(
-                      onPressed: _saveProfile,
-                      child: const Text('Save'),
-                    ),
-                  ),
-                ],
-              ),
-            ] else ...[
-              _buildInfoRow('Name', _user.name),
-              const SizedBox(height: 12),
-              _buildInfoRow('Email', _user.email),
-              const SizedBox(height: 12),
-              _buildInfoRow('Member Since', 'January 2024'),
-            ],
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildInfoRow(String label, String value) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 100,
-          child: Text(
-            label,
+          ),
+          const SizedBox(height: AppConstants.paddingMedium),
+          Text(
+            user.name,
             style: const TextStyle(
-              fontWeight: FontWeight.w500,
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: AppConstants.paddingSmall),
+          Text(
+            user.email,
+            style: TextStyle(
+              fontSize: 16,
               color: AppConstants.textSecondary,
             ),
           ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: AppConstants.textPrimary,
+          if (user.phone != null) ..[
+            const SizedBox(height: AppConstants.paddingSmall),
+            Text(
+              user.phone!,
+              style: TextStyle(
+                fontSize: 16,
+                color: AppConstants.textSecondary,
+              ),
             ),
-          ),
-        ),
-      ],
+          ],
+        ],
+      ),
     );
   }
 
-  Widget _buildOrderHistory() {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                const Text(
-                  'Order History',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w600,
-                    color: AppConstants.textPrimary,
-                  ),
+  Widget _buildProfileActions(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          ListTile(
+            leading: const Icon(Icons.edit, color: Colors.blue),
+            title: const Text('Edit Profile'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              _showEditProfileDialog(context);
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.notifications, color: Colors.orange),
+            title: const Text('Notifications'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Notifications settings coming soon!'),
                 ),
-                TextButton(
-                  onPressed: () {},
-                  child: const Text('View All'),
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: const Icon(Icons.help, color: Colors.green),
+            title: const Text('Help & Support'),
+            trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+            onTap: () {
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text('Help & Support coming soon!'),
                 ),
-              ],
+              );
+            },
+          ),
+          const Divider(height: 1),
+          ListTile(
+            leading: Icon(Icons.logout, color: AppConstants.errorColor),
+            title: Text(
+              'Logout',
+              style: TextStyle(color: AppConstants.errorColor),
             ),
-            const SizedBox(height: 16),
-            if (_user.orderHistory.isEmpty)
-              const Text(
+            onTap: () => _showLogoutDialog(context),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildOrderHistory(User user) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(AppConstants.radiusMedium),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.all(AppConstants.paddingMedium),
+            child: Text(
+              'Order History',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+          if (user.orderHistory.isEmpty)
+            const Padding(
+              padding: EdgeInsets.all(AppConstants.paddingMedium),
+              child: Text(
                 'No orders yet',
                 style: TextStyle(
-                  color: AppConstants.textSecondary,
+                  color: Colors.grey,
                 ),
-              )
-            else
-              Column(
-                children: _user.orderHistory.take(3).map((order) {
-                  return _buildOrderItem(order);
-                }).toList(),
               ),
-          ],
-        ),
+            )
+          else
+            ...user.orderHistory.map((order) => _buildOrderItem(order)),
+        ],
       ),
     );
   }
@@ -290,193 +214,73 @@ class _ProfileScreenState extends State<ProfileScreen> {
         statusColor = Colors.blue;
     }
 
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: AppConstants.cardBackground,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Order #${order.id}',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: AppConstants.textPrimary,
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  order.status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Date: ${order.date.day}/${order.date.month}/${order.date.year}',
-            style: const TextStyle(
-              color: AppConstants.textSecondary,
-              fontSize: 14,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Total: \$${order.total.toStringAsFixed(2)}',
-            style: const TextStyle(
-              fontWeight: FontWeight.w600,
-              color: AppConstants.primaryColor,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildActions() {
     return Column(
       children: [
-        Card(
-          child: Column(
-            children: [
-              ListTile(
-                leading: const Icon(
-                  Icons.settings,
-                  color: AppConstants.primaryColor,
-                ),
-                title: const Text('Settings'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  // Navigate to settings
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(
-                  Icons.help_outline,
-                  color: AppConstants.primaryColor,
-                ),
-                title: const Text('Help & Support'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  // Navigate to help
-                },
-              ),
-              const Divider(height: 1),
-              ListTile(
-                leading: const Icon(
-                  Icons.info_outline,
-                  color: AppConstants.primaryColor,
-                ),
-                title: const Text('About'),
-                trailing: const Icon(Icons.arrow_forward_ios),
-                onTap: () {
-                  _showAboutDialog();
-                },
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
-        SizedBox(
-          width: double.infinity,
-          child: OutlinedButton(
-            onPressed: _showLogoutDialog,
-            style: OutlinedButton.styleFrom(
-              foregroundColor: Colors.red,
-              side: const BorderSide(color: Colors.red),
+        ListTile(
+          title: Text(
+            'Order ${order.orderNumber}',
+            style: const TextStyle(
+              fontWeight: FontWeight.w500,
             ),
-            child: const Text('Logout'),
           ),
+          subtitle: Text(
+            '${_formatDate(order.date)} • \$${order.totalAmount.toStringAsFixed(2)}',
+          ),
+          trailing: Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 8,
+              vertical: 4,
+            ),
+            decoration: BoxDecoration(
+              color: statusColor.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              order.status,
+              style: TextStyle(
+                color: statusColor,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+          onTap: () {
+            // Navigate to order details (not implemented)
+          },
         ),
+        const Divider(height: 1),
       ],
     );
   }
 
-  void _saveProfile() {
-    if (_nameController.text.trim().isEmpty ||
-        _emailController.text.trim().isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please fill in all fields'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    // Validate email format
-    if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
-        .hasMatch(_emailController.text)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please enter a valid email address'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
-
-    setState(() {
-      _user = User(
-        id: _user.id,
-        name: _nameController.text.trim(),
-        email: _emailController.text.trim(),
-        avatar: _user.avatar,
-        orderHistory: _user.orderHistory,
-      );
-      _isEditing = false;
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile updated successfully'),
-        backgroundColor: AppConstants.primaryColor,
-      ),
-    );
+  String _formatDate(DateTime date) {
+    return '${date.day}/${date.month}/${date.year}';
   }
 
-  void _showAboutDialog() {
+  void _showEditProfileDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('About Laserjet'),
-          content: const Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text('Laserjet v1.0.0'),
-              SizedBox(height: 8),
-              Text('Made With BrainBox'),
-              SizedBox(height: 8),
-              Text(
-                'A user-friendly mobile app designed to simplify the process of purchasing printers.',
-              ),
-            ],
+          title: const Text('Edit Profile'),
+          content: const Text(
+            'Profile editing functionality would be implemented here with form fields for name, email, phone, etc.',
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
+              child: const Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile editing coming soon!'),
+                  ),
+                );
+              },
+              child: const Text('Save'),
             ),
           ],
         );
@@ -484,7 +288,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showLogoutDialog() {
+  void _showLogoutDialog(BuildContext context) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -496,35 +300,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onPressed: () => Navigator.of(context).pop(),
               child: const Text('Cancel'),
             ),
-            TextButton(
+            ElevatedButton(
               onPressed: () {
                 Navigator.of(context).pop();
-                _logout();
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const DashboardScreen()),
+                  (route) => false,
+                );
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Logged out successfully'),
+                  ),
+                );
               },
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.red),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppConstants.errorColor,
               ),
+              child: const Text('Logout'),
             ),
           ],
         );
       },
-    );
-  }
-
-  void _logout() {
-    // Clear any stored user data and navigate back to dashboard
-    Navigator.pushAndRemoveUntil(
-      context,
-      MaterialPageRoute(builder: (context) => const DashboardScreen()),
-      (route) => false,
-    );
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Logged out successfully'),
-        duration: Duration(seconds: 2),
-      ),
     );
   }
 }

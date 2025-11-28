@@ -3,8 +3,10 @@ import '../utils/constants.dart';
 import 'dashboard_screen.dart';
 
 class SplashScreen extends StatefulWidget {
+  const SplashScreen({super.key});
+
   @override
-  _SplashScreenState createState() => _SplashScreenState();
+  State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen>
@@ -16,49 +18,34 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   void initState() {
     super.initState();
-    _initAnimations();
-    _navigateToDashboard();
-  }
-
-  void _initAnimations() {
+    
     _animationController = AnimationController(
       duration: const Duration(milliseconds: 1500),
       vsync: this,
     );
-
+    
     _fadeAnimation = Tween<double>(
       begin: 0.0,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeIn),
+      curve: Curves.easeIn,
     ));
-
+    
     _scaleAnimation = Tween<double>(
       begin: 0.8,
       end: 1.0,
     ).animate(CurvedAnimation(
       parent: _animationController,
-      curve: const Interval(0.2, 0.8, curve: Curves.elasticOut),
+      curve: Curves.elasticOut,
     ));
-
+    
     _animationController.forward();
-  }
-
-  void _navigateToDashboard() {
+    
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        Navigator.pushReplacement(
-          context,
-          PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) =>
-                const DashboardScreen(),
-            transitionsBuilder:
-                (context, animation, secondaryAnimation, child) {
-              return FadeTransition(opacity: animation, child: child);
-            },
-            transitionDuration: const Duration(milliseconds: 500),
-          ),
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const DashboardScreen()),
         );
       }
     });
@@ -90,7 +77,7 @@ class _SplashScreenState extends State<SplashScreen>
                       height: 120,
                       decoration: BoxDecoration(
                         color: AppConstants.primaryColor,
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
                             color: AppConstants.primaryColor.withOpacity(0.3),
@@ -106,26 +93,28 @@ class _SplashScreenState extends State<SplashScreen>
                       ),
                     ),
                     const SizedBox(height: 32),
-                    const Text(
+                    Text(
                       AppConstants.appName,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: AppConstants.textPrimary,
+                        letterSpacing: 1.2,
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    const Text(
+                    const SizedBox(height: 16),
+                    Text(
                       AppConstants.tagline,
                       style: TextStyle(
                         fontSize: 16,
                         color: AppConstants.textSecondary,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
                     SizedBox(
-                      width: 30,
-                      height: 30,
+                      width: 40,
+                      height: 40,
                       child: CircularProgressIndicator(
                         strokeWidth: 3,
                         valueColor: AlwaysStoppedAnimation<Color>(

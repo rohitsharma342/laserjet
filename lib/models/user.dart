@@ -2,14 +2,14 @@ class User {
   final String id;
   final String name;
   final String email;
-  final String? avatar;
+  final String? phone;
   final List<Order> orderHistory;
 
   User({
     required this.id,
     required this.name,
     required this.email,
-    this.avatar,
+    this.phone,
     this.orderHistory = const [],
   });
 
@@ -18,7 +18,7 @@ class User {
       id: json['id'],
       name: json['name'],
       email: json['email'],
-      avatar: json['avatar'],
+      phone: json['phone'],
       orderHistory: (json['orderHistory'] as List<dynamic>?)
           ?.map((order) => Order.fromJson(order))
           .toList() ?? [],
@@ -30,7 +30,7 @@ class User {
       'id': id,
       'name': name,
       'email': email,
-      'avatar': avatar,
+      'phone': phone,
       'orderHistory': orderHistory.map((order) => order.toJson()).toList(),
     };
   }
@@ -38,36 +38,40 @@ class User {
 
 class Order {
   final String id;
+  final String orderNumber;
   final DateTime date;
   final String status;
-  final double total;
-  final List<String> items;
+  final double totalAmount;
+  final List<String> productIds;
 
   Order({
     required this.id,
+    required this.orderNumber,
     required this.date,
     required this.status,
-    required this.total,
-    required this.items,
+    required this.totalAmount,
+    required this.productIds,
   });
 
   factory Order.fromJson(Map<String, dynamic> json) {
     return Order(
       id: json['id'],
+      orderNumber: json['orderNumber'],
       date: DateTime.parse(json['date']),
       status: json['status'],
-      total: json['total'].toDouble(),
-      items: List<String>.from(json['items']),
+      totalAmount: json['totalAmount'].toDouble(),
+      productIds: List<String>.from(json['productIds']),
     );
   }
 
   Map<String, dynamic> toJson() {
     return {
       'id': id,
+      'orderNumber': orderNumber,
       'date': date.toIso8601String(),
       'status': status,
-      'total': total,
-      'items': items,
+      'totalAmount': totalAmount,
+      'productIds': productIds,
     };
   }
 }

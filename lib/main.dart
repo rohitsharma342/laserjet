@@ -1,25 +1,48 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'providers/cart_provider.dart';
+import 'providers/product_provider.dart';
 import 'screens/splash_screen.dart';
-import 'services/cart_service.dart';
-import 'utils/theme.dart';
+import 'utils/constants.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const LaserjetApp());
 }
 
-class MyApp extends StatelessWidget {
+class LaserjetApp extends StatelessWidget {
+  const LaserjetApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MultiProvider(
       providers: [
-        ChangeNotifierProvider(create: (context) => CartService()),
+        ChangeNotifierProvider(create: (_) => CartProvider()),
+        ChangeNotifierProvider(create: (_) => ProductProvider()),
       ],
       child: MaterialApp(
         title: 'Laserjet',
-        theme: AppTheme.lightTheme,
-        home: SplashScreen(),
         debugShowCheckedModeBanner: false,
+        theme: ThemeData(
+          primaryColor: AppConstants.primaryColor,
+          colorScheme: ColorScheme.fromSeed(
+            seedColor: AppConstants.primaryColor,
+            brightness: Brightness.light,
+          ),
+          useMaterial3: true,
+          appBarTheme: const AppBarTheme(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+            elevation: 0,
+          ),
+          scaffoldBackgroundColor: Colors.grey[50],
+          cardTheme: CardTheme(
+            elevation: 2,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+        ),
+        home: const SplashScreen(),
       ),
     );
   }
