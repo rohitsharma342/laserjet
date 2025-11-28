@@ -152,7 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             const SizedBox(height: 16),
-            if (_isEditing) ..[
+            if (_isEditing) ...[
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
@@ -191,7 +191,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ],
               ),
-            ] else ..[
+            ] else ...[
               _buildInfoRow('Name', _user.name),
               const SizedBox(height: 12),
               _buildInfoRow('Email', _user.email),
