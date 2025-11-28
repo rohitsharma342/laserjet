@@ -77,7 +77,7 @@ class ProfileScreen extends StatelessWidget {
               color: AppConstants.textSecondary,
             ),
           ),
-          if (user.phone != null) ..[
+          if (user.phone != null) ...[
             const SizedBox(height: AppConstants.paddingSmall),
             Text(
               user.phone!,

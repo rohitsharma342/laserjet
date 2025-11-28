@@ -4,8 +4,12 @@ import 'providers/cart_provider.dart';
 import 'providers/product_provider.dart';
 import 'screens/splash_screen.dart';
 import 'utils/constants.dart';
+import 'services/web_service.dart';
 
 void main() {
+  // Initialize web service for MIME type handling
+  WebService().initialize();
+  
   runApp(const LaserjetApp());
 }
 
@@ -35,7 +39,7 @@ class LaserjetApp extends StatelessWidget {
             elevation: 0,
           ),
           scaffoldBackgroundColor: Colors.grey[50],
-          cardTheme: CardTheme(
+          cardTheme: CardThemeData(
             elevation: 2,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
